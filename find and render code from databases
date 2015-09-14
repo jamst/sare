@@ -1,0 +1,31 @@
+通过读取数据库html代码生成页面
+
+def preview
+    @ad = Advertisement.find(params[:id])
+    @preview_content = @ad.code.gsub(/%%.+?%%/, "")
+    # @width = @ad.size.split('*')[0]
+    # @height = @ad.size.split('*')[1]
+    @width = params[:width]
+    @height = params[:height]
+    render :partial => "preview_content"
+end
+ 
+ 
+<%= @preview_content %>
+<script>
+var tag = document.getElementsByTagName('img');
+if(tag.length > 0){
+tag[0].style['width']= '<%=@width%>px';
+tag[0].style['height']= '<%=@height%>px';
+}
+var embed = document.getElementsByTagName('embed');
+if(embed.length > 0){
+embed[0].style['width']= '<%=@width%>px';
+embed[0].style['height']= '<%=@height%>px';
+}
+</script>
+<style type="text/css">
+body{
+margin:0;
+} 
+</style>
