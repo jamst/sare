@@ -1,0 +1,15 @@
+google对html5的支持
+
+if ad[:xsi_type] == 'TemplateAd'
+       add_operation[:operand][:ad][:origin_ad_id] = ad[:id]
+       add_operation[:operand][:ad][:name] = ad[:name]
+       add_operation[:operand][:ad][:template_id] = ad[:template_id]
+end
+ 
+谷歌的html5支持类型为TemplateAd需要在google平台上传素材。
+通过api可以更新他的url等消息。
+需要注意的是使用add_operation[:operand][:ad][:origin_ad_id] = ad[:id]参数来同步他的素材。
+另外：
+add_operation[:operand][:ad][:name] = ad[:name]
+add_operation[:operand][:ad][:template_id] = ad[:template_id]
+这两个参数也是必需的。
