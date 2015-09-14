@@ -1,0 +1,41 @@
+google用ActiveSupport::Base64.encode64方式上传图片
+
+def add_image_ad(ad_group_id, image_ads)
+      ad_group_id = ad_group_id.to_i
+      
+      image_ads = image_ads.inject([]) do |s, r|
+        img_data = ActiveSupport::Base64.encode64(open(r[:image_path]) { |io| io.read })
+        h = {
+          :xsi_type => 'ImageAd',
+          :url => r[:url],
+          :display_url => r[:display_url],
+          :name => r[:name],
+          :image => {
+            :name => r[:img_name],
+            :data => img_data
+          }
+        }
+        
+        s << h
+      end
+      image_ad_operations = image_ads.map do |img_ad|
+        {:operator => 'ADD',
+         :operand => {:ad_group_id => ad_group_id, :ad => img_ad}}
+      end
+      
+      # Add ads.
+      begin
+        response = @service.mutate(image_ad_operations)
+        if response and response[:value]
+          r = response[:value].inject([]) do |s, i|
+            s << {:ad_group_id => i[:ad_group_id], :ad => {:ad_id => i[:ad][:id], :name => i[:ad][:name], :ad_type => i[:ad][:ad_type], :display_url => i[:ad][:display_url], :approval_status =>i[:ad][:approval_status]}}
+          end
+          
+          return "success", r
+        else
+          return "failure"
+        end
+      rescue
+        return 'failure'
+      end
+    end
