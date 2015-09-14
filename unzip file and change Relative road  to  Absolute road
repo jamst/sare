@@ -1,0 +1,170 @@
+解压zip改变相对路劲到绝对路劲
+
+codeing by 素婷
+ 
+def handle_zip(origin_name, user_id)
+    if self.image_url=~ /\.zip$/i
+      begin
+        folder = origin_name.gsub('.zip', '') if origin_name.present?
+        dirname = "#{Rails.root}/public/upload_files/a03/html5/#{self.id}"
+        userid_name = "#{Rails.root}/public/upload_files/temp_zip/#{user_id}"
+        replaced_url = "http://a03.optimix.asia/html5/#{self.id}"
+        FileUtils.mkdir_p(dirname) unless File.directory?(dirname)
+        %x(rm -rf #{dirname}/*)
+        %x(cp -r #{userid_name}/*  #{dirname})
+        %x(chown xmo:xmo -R #{dirname}) if Rails.env.production?
+ 
+        unless File.exist?("#{userid_name}/index.html")
+          folder = Dir.entries("#{userid_name}").select{|dir| ![".",".."].include?(dir)}.last.to_s
+          File.rename("#{dirname}/#{folder}","#{dirname}/html5_assets")
+          folder = "html5_assets"
+        end
+ 
+        %x(rm -rf #{userid_name})
+        read_list_path = File.directory?("#{dirname}/#{folder}") ? "#{dirname}/#{folder}" : dirname
+        replaced_url = File.directory?("#{dirname}/#{folder}") ? "#{replaced_url}/#{folder}" : replaced_url
+        ab_index_url = File.directory?("#{dirname}/#{folder}") ? "#{dirname}/#{folder}/index.html" : "#{dirname}/index.html"
+ 
+        sign = read_list_path =~ /#{self.id.to_s}$/ ? self.id.to_s : folder
+        all_urls = get_file_list(read_list_path, self.id.to_s, folder, sign)
+        replace_url = all_urls.select{|url| url.downcase =~ /\.(gif|jpg|jpeg|png|js|css)$/i}
+        all_js_path = replace_url.select{|url| url.downcase =~ /\.js$/i}
+ 
+        replace_js_files(dirname,folder,all_js_path,replace_url,replaced_url)
+        replace_html_file(ab_index_url, replace_url, replaced_url)
+          
+      rescue
+        return {"status" => "invalid" , "message" => 'please reupload zip'}
+      end
+    end
+  end
+ 
+  def get_urls_from_js(js,directory)
+    reg = /\"([^\"\']+\.(png|gif|jpg|jpeg|js|css))\"|\'([^\'\"]+\.(png|gif|jpg|jpeg|js|css))\'/
+    urls = js.scan(reg).map{|b| b[0].present? ? b[0] : b[2]}.uniq
+    urls.present? ? sort_url(urls.select{|url| directory.any?{|dir| dir.include?(url.gsub(/\.(\.|)\//,''))}}) : []
+  end
+ 
+  def replace_js_files(dirname,folder,all_js_path,replace_url,replaced_url)
+    all_js_path.each do |path|
+      js_pathname = File.directory?("#{dirname}/#{folder}") ? "#{dirname}/#{folder}/#{path}" : "#{dirname}/#{path}"
+      file = File.open(js_pathname)
+      js = file.read
+      js_urls_from_file = get_urls_from_js(js.gsub(/\s+/,''), replace_url)
+      js_urls_from_file.each {|url|
+        path1 = path.split('/')
+        (url.scan(/\.\.\//).count + 1).times {path1.pop}
+        root_url = path1.push(url.gsub(/\.(\.|)\//,'').gsub('.', '00replace00')).join('/')
+        js = js.gsub(url,"#{replaced_url}/#{root_url}")
+      }
+      File.open(js_pathname, "w") { |fw| fw.write(js.gsub('00replace00', '.'))} if js_urls_from_file.present?
+    end
+  end
+ 
+  def replace_html_file(ab_index_url, replace_url, replaced_url)
+    file = File.open(ab_index_url)
+    html = file.read
+    replace_url.each{|r| html = html.gsub("./#{r}","#{replaced_url}/#{r.gsub('.','00replace00')}").gsub(r,"#{replaced_url}/#{r}").gsub('00replace00','.')}
+    File.open(ab_index_url, "w") { |fw| fw.write(html) }
+    self.update_attributes(:h5_code => html)
+  end
+ 
+  def sort_url(urls)
+    urls1 = urls.select{|url| url.match(/\.(\.|)\//)}
+    sort_has_point(urls1) + (urls - urls1).sort{|x,y| y.scan(/\//).count <=> x.scan(/\//).count}
+  end
+ 
+  def sort_has_point(urls)
+    urls.sort{|x,y|
+      if x.scan(/\.(\.|)\//).count > 0  && x.scan(/\.(\.|)\//).count == y.scan(/\.(\.|)\//).count
+        x.scan(/\.\.\//).count > y.scan(/\.\.\//).count ? -1 : 1
+      else
+        y.scan(/\.(\.|)\//).count <=> x.scan(/\.(\.|)\//).count
+      end
+    }
+  end
+ 
+  def verification_zip(origin_name,user_id)
+    message = []
+    begin
+      folder = origin_name.gsub('.zip', '') if origin_name.present?
+      pathname = "#{Rails.root}/public/upload_files/a03/#{self.image_url.gsub(/http:\/\/a03.optimix.asia\//, '')}"
+      userid_name = "#{Rails.root}/public/upload_files/temp_zip/#{user_id}"
+      FileUtils.mkdir_p(userid_name) unless File.directory?(userid_name)
+      return {"status" => "invalid" , "message" => I18n.t('pretargetings.validate.html5_too_large') }  if File.size("#{pathname}").to_i/1024 > ZIP_MAX_SIZE
+ 
+      %x(rm -rf #{userid_name}/*)
+      %x(unzip -o -d #{userid_name} #{pathname})
+      %x(rm -rf #{userid_name}/__MACOSX) if File.directory?("#{userid_name}/__MACOSX")
+ 
+      directory = Dir.entries("#{userid_name}").select{|dir| ![".",".."].include?(dir)}
+      index_html = directory.select{|dir| dir =~ /\.html$/ }
+      if index_html.present?
+        File.rename("#{userid_name}/#{index_html.last}", "#{userid_name}/index.html")
+      else
+        folder = directory.last
+        dire = Dir.entries("#{userid_name}/#{folder}").select{|dir| dir =~ /\.html$/}
+        File.rename("#{userid_name}/#{folder}/#{dire.last}", "#{userid_name}/#{folder}/index.html")
+      end
+ 
+      read_list_path = File.directory?("#{userid_name}/#{folder}") ? "#{userid_name}/#{folder}" : userid_name
+      ab_index_url = File.directory?("#{userid_name}/#{folder}") ? "#{userid_name}/#{folder}/index.html" : "#{userid_name}/index.html"
+ 
+      ve = verification_html(ab_index_url)
+      message << ve["message"] if ve.is_a?(Hash) && ve["status"] == "invalid"
+ 
+      sign = read_list_path =~ /#{user_id.to_s}$/ ? user_id.to_s : folder
+      all_urls = get_file_list(read_list_path, user_id.to_s, folder, sign)
+ 
+      ve = verification_file_type(all_urls,ab_index_url)
+      message << ve["message"] if ve.is_a?(Hash) && ve["status"] == "invalid"
+ 
+      ve = verification_head_size(ab_index_url,self.size)
+      message << ve["message"] if ve.is_a?(Hash) && ve["status"] == "invalid"
+      message.present? ? {"status" => "invalid" , "message" => message.join('</p>')} : true
+    rescue
+      return {"status" => "invalid" , "message" => 'please reupload zip'}
+    end
+  end
+ 
+  def get_file_list(path, id, folder=nil,sign="0")
+    b = []
+    Dir.entries(path).each do |sub|
+      if sub != '.' && sub != '..'
+        if File.directory?("#{path}/#{sub}")
+          b = b + get_file_list("#{path}/#{sub}", id, folder, sign)
+        end
+        b << (path + '/' + sub).split(sign + '/')[1]  unless File.directory?("#{path}/#{sub}")
+      end
+    end
+    b
+  end
+ 
+  def verification_html(path)
+    File.open(path) do |fr|
+      xml = fr.read
+      match_data = xml.gsub(/\s+/,'').match(/<metaname=(\"|\')ad\.size(\"|\')content=(\"|\')width=\d+,height=\d+(\"|\')(\/|)>/i)
+      unless match_data.present? && xml =~ /\$clickurl\$/i && xml =~ /\<\!DOCTYPE html\>/i && xml =~ /\<html/i && xml =~ /\<body/i && xml =~ /\<\/body\>/i && xml =~ /\<\/html\>/i
+        {"status" => "invalid" , "message" => I18n.t('pretargetings.validate.please_upload_effective_material') }
+      end
+    end
+  end
+ 
+  def verification_file_type(array,path)
+ 
+    if array.any?{|item| item.downcase =~ /\.(bmp|pcx|tiff|tga|exif|fpx|svg|psd|cdr|pcd|dxf|ufo|eps|ai|hdri|raw)$/}
+      {"status" => "invalid" , "message" => I18n.t('pretargetings.validate.image_Format_error') }
+    end
+    if array.any?{|item| item.downcase =~ /\.json$/}
+      {"status" => "invalid" , "message" => I18n.t('pretargetings.validate.please_upload_effective_material') } 
+    end
+  end
+ 
+  def verification_head_size(path,size)
+    selected_size = size.split('*')
+    File.open(path) do |fr|
+      xml=fr.read.gsub(/\s+/,'')
+      match_data = xml.match(/<metaname=(\"|\')ad\.size(\"|\')content=(\"|\')width=\d+,height=\d+(\"|\')(\/|)>/i)
+      {"status" => "invalid" , "message" => I18n.t('pretargetings.validate.size_Format_error') } if match_data.present? && match_data.to_s.scan(/\d+/) != selected_size
+    end
+  end
