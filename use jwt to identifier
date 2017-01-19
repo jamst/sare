@@ -1,0 +1,159 @@
+使用到的gem  
+  
+gem 'httparty'  
+  
+gem 'jwt'  
+  
+   
+  
+一：调别人api  
+  
+继承类：  
+  
+module JwtToken  
+  
+  def generate_auth_token(options = {})  
+  
+    payload = {  
+  
+      iss: identifier,  
+  
+    }  
+  
+    payload.merge! options  
+  
+    JWT.encode(payload, password_digest.to_s)  
+  
+  end  
+  
+end  
+  
+   
+  
+类：  
+  
+module Helper  
+  
+  extend JwtToken  
+  
+  SETTING['you_host'] = “ you ip“  
+  
+  mattr_accessor :identifier, :password_digest  
+  
+  self.identifier = 'you identifier'  
+  
+  self.password_digest = '12312SM6retKX1Z82Y53N3LFGL'  
+  
+  
+  def self.auth_token  
+  
+    @auth_token ||= generate_auth_token(sub: 'auth')  
+  
+  end  
+  
+  
+  def self.query(url, body)  
+  
+    url = SETTING['you_host'] + url  
+  
+    headers = {  
+  
+      'Auth-Token': auth_token  
+  
+    }  
+  
+    HTTParty.post(url, body: body, headers: headers)  
+  
+  end  
+  
+end  
+  
+  
+调用：  
+  
+result = Helper.query('api/you_api/new_blog', body)  
+  
+  
+二：对外提供api：  
+  
+  
+校验权限：  
+  
+class Api::BaseController < ApplicationController  
+  
+  before_action :verify_auth_token  
+  
+  ALLOW_APP = {  
+  
+    'you_secret' => '12312S12313OZ82Y53N3LFGL',  
+  
+    'wh_in' => '12331288c583772a85174b11547c5945a15'  
+  
+  }  
+  
+   
+  
+  def verify_auth_token  
+  
+    token = request.headers['Auth-Token']  
+  
+    payload = decode_without_verification(token)  
+  
+    return unless payload  
+  
+    begin  
+  
+      JWT.decode(token, ALLOW_APP[payload['iss']], true, {'sub' => 'auth', verify_sub: true})  
+  
+    rescue => e  
+  
+      render(json: { error: e.message }, status: 500) and return  
+  
+    end  
+  
+  end  
+  
+  private  
+  
+  def decode_without_verification(token)  
+  
+    begin  
+  
+      payload, _ = JWT.decode(token, nil, false, verify_expiration: false)  
+  
+    rescue => e  
+  
+      render(json: { error: e.message }, status: 500) and return  
+  
+    end  
+  
+    payload  
+  
+  end  
+  
+end  
+  
+   
+权限通过同时返回查询处理结果  
+  
+class Api::JobController < Api::BaseController  
+  
+def shipping  
+  
+    shiping_params = params[:shipping]  
+  
+    shipping = Shipping.new.tap do |ship|  
+  
+      ship.express_no = shiping_params[:express_no]  
+  
+      ship.ship_type = params[:shipping_name]  
+  
+      ship.order_item_id = params[:order_detail_id]  
+  
+    end  
+  
+    render json: {success: true}, status: 200  
+  
+  end  
+  
+end  
