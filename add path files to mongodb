@@ -1,0 +1,23 @@
+# 迁移积分商城商品图片
+  def self.add_file_to_mongo
+   root = Rails.root.join("doc/point_pic").to_s
+   grid = Rails.mongo.database.fs
+    Dir["#{root}**/*"].each do |f|
+      file = File.open(f) 
+      next if File.directory?(f)
+      file_name = f.split("/").last
+      begin
+       unless file_name.include?("default_")
+        point_good = ::Point::Good.find_by_default_pic_file_name("#{file_name}")
+        if point_good 
+          content_type =  MIME::Type.simplified(%x{file --mime -b #{f} }.chomp)
+          attachment = AttachmentFile.create(attachment_entity_type:"Point::Good",attachment_entity_id:point_good.id, path:file_name, name:file_name, content_type:content_type, file_size:file.size)
+          store_dir = "uploads/point/good/path/#{NumberUtils.split_id(attachment.id,false)}/#{file_name}"
+          grid.upload_from_stream(store_dir, file, content_type:content_type)
+        end
+       end
+      rescue Exception => e
+        p f
+      end
+    end
+  end
