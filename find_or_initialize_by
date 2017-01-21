@@ -1,0 +1,8 @@
+inventory_sale_stat = InventorySaleStat.find_or_initialize_by(stats_date: search_date,vendor_order_type:vendor_order_type)
+inventory_sale_stat.assign_attributes(stats_date: search_date.strftime('%Y-%m-%d'),
+                               vendor_order_type: vendor_order_type,
+                                  chemical_count: product_daily_report.chemical_count,
+                                     order_count: product_daily_report.order_count,
+                                      sale_total: product_daily_report.sale_total,
+                                      cost_total: product_daily_report.cost_total)
+inventory_sale_stat.save
