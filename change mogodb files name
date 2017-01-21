@@ -1,0 +1,29 @@
+往一个文件中逐行写文件
+
+File.open("/Users/jamst/ebuychem/script/config_u5.conf",'w') do |f|
+  EbuychemAttachment.where(attachment_type:"PaymentInfo").each do |ec|
+	pp = "uploads/payment_info/path/#{WhUtils.split_id(ec.id,false)}/#{ec.path},uploads/finace_payment/path/#{WhUtils.split_id(ec.id,false)}/#{ec.path}"
+	f.write("#{pp}\n")	
+	p pp
+  end
+end
+
+跑一个脚本mogodb文件名更新
+#! /bin/sh
+while read mongoData ; do
+
+            data1=`echo $mongoData | grep -v '#' | awk -F ',' '{print $1}'`
+
+            data2=`echo $mongoData | grep -v '#' | awk -F ',' '{print $2}'`
+
+            mongoDataChang="db.fs.files.update({filename:"\"$data1\""},{"\$set":{filename:"\"$data2\""}},false,true)"
+
+
+
+            a=$mongoDataChang
+
+            echo $a
+
+            mongo test --eval "$a"
+
+done < "/root/config_u.conf"
