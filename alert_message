@@ -302,3 +302,42 @@ alert_confirm_message('提示','转让成功，剩余积分 <%= current_user.poi
 },function(){
   location.href = "/my_points"
 },"继续转让","查看记录")
+
+
+
+方法二：重写JavaScript的confirm方法
+function confirm(id, type) {
+    if ($("#myConfirm").length > 0) {
+        $("#myConfirm").remove();
+    } 
+    var info = type == "restart" ? "<p>确定重启"+id+"?</p>" : "<p>设置你的实例数</p>"
+    if (type == "scale")
+      info += "<input  value='' class='form-control'>"
+    var html = "<div class='modal fade' id='myConfirm' >"
+            + "<div class='modal-backdrop in' style='opacity:0; '></div>"
+            + "<div class='modal-dialog' style='z-index:2901; margin-top:60px; width:400px; '>"
+            + "<div class='modal-content'>"
+            + "<div class='modal-header'  style='font-size:16px; '>"
+            + "<span class='glyphicon glyphicon-envelope'>&nbsp;</span>提示<button type='button' class='close' data-dismiss='modal'>"
+            + "<span style='font-size:20px;  ' class='glyphicon glyphicon-remove'></span><tton></div>"
+            + "<div class='modal-body text-center' id='myConfirmContent' style='font-size:18px; '>"
+            + info
+            + "</div>"
+            + "<div class='modal-footer ' style=''>"
+            + "<button class='btn btn-info ' data-dismiss='modal'>取消<tton>"
+            + "<button class='btn btn-danger ' id='confirmOk' >确定<tton>"
+            + "</div>" + "</div></div></div>";
+    $("body").append(html);
+
+    $("#myConfirm").modal("show");
+
+    $("#confirmOk").on("click", function() {
+        $("#myConfirm").modal("hide");
+        if(type == "restart"){
+          restartCommit(id)
+        }else if(type == "scale"){
+
+        }
+         // 执行函数
+    });
+}
