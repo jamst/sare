@@ -1,0 +1,142 @@
+Java代码  收藏代码
+class PrintBase  
+  # 默认现在只有a4纸大小  
+  PaperType = {1=>[210,297]}  
+  # 标签尺寸  
+  TagType = {0=>[100,40],1=>[60,40],2=>[150,60]}  
+  
+  attr_accessor :id,:tag_type_x,:tag_type_y,:print_size,:print_x_size,:print_y_size,:print_page  
+  
+  def initialize(tag_type=0, obj_size=nil , paper_type=1)  
+    @paper_type_x = PaperType[paper_type][0]  
+    @paper_type_y = PaperType[paper_type][1]  
+    @tag_type_x = TagType[tag_type][0]  
+    @tag_type_y = TagType[tag_type][1]  
+    @id = tag_type  
+      
+    # 纸张可用面积  
+    @paper_type_area = @paper_type_x * @paper_type_y   
+    # 标签面积  
+    @tag_type_area = @tag_type_x * @tag_type_y  
+    # 每行打印张数  
+    @print_x_size = @paper_type_x / @tag_type_x  
+    # 每列打印张数  
+    @print_y_size = @paper_type_y / @tag_type_y  
+  
+    # 每页纸打印标签张数  
+    @print_size = @paper_type_area / @tag_type_area  
+    @print_size = @print_x_size * @print_y_size < @print_size ? @print_x_size *   
+    @print_y_size : @print_size  
+    # 需打印纸张数  
+    @print_page = obj_size ? ( obj_size / @print_size + (obj_size % @print_size == 0 ? 0 : 1) ) : 1  
+  end  
+  
+end      
+
+
+Java代码  收藏代码
+class Admin::Print::WhmallTagsController <  Admin::BaseController  
+    layout:false  
+    def print  
+      @tag = PrintBase.new(params[:tag_id].to_i)  
+      @chemical = ::Chemical.find(params[:chemical_id]|| 25)  
+    end  
+end  
+
+
+
+Java代码  收藏代码
+<style type="text/css" media="print">  
+.noprint{display : none }  
+.pageBreak{ page-break-after:always;}  
+</style>  
+  
+[align=center]  
+  
+   <div style="width:100%">  
+     <div>  
+       <% (1..@tag.print_size).each do |i|%>  
+          <%if i == 1 %>  
+            <!--首行行头!-->  
+            <div>   
+            <div id="print_<%= i %>" style="width:<%= 98/@tag.print_x_size %>%;height:<%= 100/@tag.print_y_size %>%;margin-right: 10px;float: left;">   
+               <div style="width:100%;height:100%;" id="show_note<%= i %>" ><button class="show_note" id="show_button<%= i %>"><%= image_tag "4-10cm.jpg", style: 'width: 100%;height: 100%; ' %></button>[/align]  
+               <div style="width:100%;height:100%;display: none;" class="noprint" id="hidde_note<%= i %>"><button class="hidde_note" id="hidde_button<%= i %>"><%= image_tag "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1494828228049&di=7219b7547575eadb65d32b7ba61af822&imgtype=0&src=http%3A%2F%2Fico.ooopic.com%2Ficonset02%2F6%2Fgif%2F53757.gif", style: 'width: 100%;height: 100%; ' %></button></div>  
+            </div>   
+          <% elsif i  == @tag.print_size %>  
+            <!--末行行尾!-->  
+            <div id="print_<%= i %>" style="width:<%= 98/@tag.print_x_size %>%;height:<%= 100/@tag.print_y_size %>%;float: left;">  
+              <%= render :partial => "print" , :locals => { :i => i }%>   
+              <div style="width:100%;height:100%;" class="noprint" id="hidde_note<%= i %>"><button class="hidde_note" id="hidde_button<%= i %>"><%= image_tag "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1494828228049&di=7219b7547575eadb65d32b7ba61af822&imgtype=0&src=http%3A%2F%2Fico.ooopic.com%2Ficonset02%2F6%2Fgif%2F53757.gif", style: 'width: 100%;height: 100%; ' %></button></div>  
+            </div>     
+          <% elsif i % @tag.print_x_size == 0 %>  
+            <!--每行行尾!-->  
+            <div id="print_<%= i %>" style="width:<%= 98/@tag.print_x_size %>%;height:<%= 100/@tag.print_y_size %>%;float: left;">  
+             <div style="width:100%;height:100%;display: none;" id="show_note<%= i %>" ><button class="show_note" id="show_button<%= i %>"><%= image_tag "4-10cm.jpg", style: 'width: 100%;height: 100%; ' %></button></div>  
+               <div style="width:100%;height:100%;" class="noprint" id="hidde_note<%= i %>"><button class="hidde_note" id="hidde_button<%= i %>"><%= image_tag "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1494828228049&di=7219b7547575eadb65d32b7ba61af822&imgtype=0&src=http%3A%2F%2Fico.ooopic.com%2Ficonset02%2F6%2Fgif%2F53757.gif", style: 'width: 100%;height: 100%; ' %></button></div>  
+            </div>   
+            </div>   
+            </br> <div>   
+          <% else %>  
+            <div id="print_<%= i %>" style="width:<%= 98/@tag.print_x_size %>%;height:<%= 100/@tag.print_y_size %>%;margin-right: 10px;float: left;">  
+              <div style="width:100%;height:100%;display: none;" id="show_note<%= i %>" ><button class="show_note" id="show_button<%= i %>"><%= image_tag "4-10cm.jpg", style: 'width: 100%;height: 100%; ' %></button></div>  
+               <div style="width:100%;height:100%;" class="noprint" id="hidde_note<%= i %>"><button class="hidde_note" id="hidde_button<%= i %>"><%= image_tag "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1494828228049&di=7219b7547575eadb65d32b7ba61af822&imgtype=0&src=http%3A%2F%2Fico.ooopic.com%2Ficonset02%2F6%2Fgif%2F53757.gif", style: 'width: 100%;height: 100%; ' %></button></div>  
+            </div>           
+          <% end %>  
+       <% end %>  
+     </div>  
+   </div>  
+  
+   <div class="pageBreak"></digv>  
+  
+</div>  
+  
+  
+<script type="text/javascript">  
+  $(".show_note").on('click',function(){  
+    var id = this.id.replace ( /[^\d.]/g, '' )  
+    $('#show_note'+ id).hide();  
+    $('#hidde_note'+ id).show();  
+  });  
+  $(".hidde_note").on('click',function(){  
+    var id = this.id.replace ( /[^\d.]/g, '' )  
+    $('#hidde_note'+ id).hide();  
+    $('#show_note'+ id).show();  
+  });  
+  
+  // 打印触发  
+  $("#btnPrint").on('click',function(){  
+    $(".noprint").css("display", "")  
+    window.print();  
+  })  
+  
+  // 切换标签  
+  $("#tag_id").on('change',function(){  
+    var tag_id = $("#tag_id").val();  
+    window.location.href = '/admin/print/whmall_tags/print?tag_id='+tag_id+"&chemical_id="+"<%= @chemical.id %>" ;  
+  })  
+  
+  // 快速选择  
+  $("#select_tag").on('change',function(){  
+    var select_tag = $("#select_tag").val();  
+    if(select_tag==0){  
+     <% (1..@tag.print_size).each do |i|%>  
+       var id = "<%= i %>"  
+       $('#hidde_note'+ id).hide();  
+       $('#show_note'+ id).show();  
+     <% end %>  
+    }else if(select_tag==1){  
+     <% (1..@tag.print_size).each do |i|%>  
+       var id = "<%= i %>"  
+       $('#show_note'+ id).hide();  
+       $('#hidde_note'+ id).show();  
+     <% end %>  
+    }else if(select_tag==2){  
+     <% (1..(@tag.print_size/2)).each do |i|%>  
+       var id = "<%= i %>"  
+       $('#hidde_note'+ id).hide();  
+       $('#show_note'+ id).show();  
+     <% end %>   
+    }  
+  })  
+</script>  
