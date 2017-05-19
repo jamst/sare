@@ -7,7 +7,7 @@ class PrintBase
 
   attr_accessor :id,:tag_type_x,:tag_type_y,:print_size,:print_x_size,:print_y_size,:print_page
 
-  def initialize(tag_type=0, obj_size=nil , paper_type=1)
+  def initialize(tag_type=0, paper_type=1)
   	@paper_type_x = PaperType[paper_type][0]
     @paper_type_y = PaperType[paper_type][1]
     @tag_type_x = TagType[tag_type][0]
@@ -31,8 +31,6 @@ class PrintBase
     # 每页纸打印标签张数
     @print_size = @paper_type_area / @tag_type_area
     @print_size = @print_x_size * @print_y_size < @print_size ? @print_x_size * @print_y_size : @print_size
-    # 需打印纸张数
-    @print_page = obj_size ? ( obj_size / @print_size + (obj_size % @print_size == 0 ? 0 : 1) ) : 1
   end
 end      
 
@@ -44,6 +42,16 @@ class Admin::Print::WhmallTagsController <  Admin::BaseController
       @tag = PrintBase.new(params[:tag_id].to_i)  
       @chemical = ::Chemical.find(params[:chemical_id]|| 25)  
     end  
+    
+    def many_print
+	    @chemicals = []
+	    params[:chemical_ids].each do |chemical_id|
+        @chemical = ::Chemical.find(chemical_id)
+        @chemicals << @chemical * params[:tag_size]
+	    end
+	    @chemicals = @chemicals.flatten
+      @tag = PrintBase.new(params[:tag_id].to_i)
+	  end
 end  
 
 
@@ -79,7 +87,9 @@ body{line-height:1.4;color:#333;font-family:"Microsoft Yahei","微软雅黑",Tah
   </div>
 </div>
 
+
 <div align="center">
+
    <div style="width:100%">
      <% if @tag.print_size >= 1 %>
      <div>
@@ -88,26 +98,26 @@ body{line-height:1.4;color:#333;font-family:"Microsoft Yahei","微软雅黑",Tah
             <!--首行行头!-->
             <div> 
             <div id="print_<%= i %>" style="width:<%= 98/@tag.print_x_size %>%;height:<%= 100/@tag.print_y_size %>%;margin-right: 10px;float: left;"> 
-               <%= render :partial => "print_#{@tag.tag_type_y}_#{@tag.tag_type_x}" , :locals => { :i => i }%> 
+               <%= render :partial => "print_#{@tag.tag_type_y}_#{@tag.tag_type_x}" , :locals => { :i => i,:chemical => @chemical }%> 
                <div style="width:100%;height:100%;" id="hidde_note<%= i %>"><div class="hidde_note button" id="hidde_button<%= i %>"><%= image_tag "timg.jpeg", style: 'width:128px;height128px;', class:"noprint"  %></div></div>
             </div> 
           <% elsif i  == @tag.print_size %>
             <!--末行行尾!-->
             <div id="print_<%= i %>" style="width:<%= 98/@tag.print_x_size %>%;height:<%= 100/@tag.print_y_size %>%;float: left;">
-              <%= render :partial => "print_#{@tag.tag_type_y}_#{@tag.tag_type_x}" , :locals => { :i => i }%> 
+              <%= render :partial => "print_#{@tag.tag_type_y}_#{@tag.tag_type_x}" , :locals => { :i => i,:chemical => @chemical }%> 
               <div style="width:100%;height:100%;"  id="hidde_note<%= i %>"><div class="hidde_note button" id="hidde_button<%= i %>"><%= image_tag "timg.jpeg", style: 'width:128px;height128px; ', class:"noprint" %></div></div>
             </div>   
           <% elsif i % @tag.print_x_size == 0 %>
             <!--每行行尾!-->
             <div id="print_<%= i %>" style="width:<%= 98/@tag.print_x_size %>%;height:<%= 100/@tag.print_y_size %>%;float: left;">
-              <%= render :partial => "print_#{@tag.tag_type_y}_#{@tag.tag_type_x}" , :locals => { :i => i }%> 
+              <%= render :partial => "print_#{@tag.tag_type_y}_#{@tag.tag_type_x}" , :locals => { :i => i,:chemical => @chemical }%> 
               <div style="width:100%;height:100%;" id="hidde_note<%= i %>"><div class="hidde_note button" id="hidde_button<%= i %>"><%= image_tag "timg.jpeg", style: 'width:128px;height128px; ', class:"noprint" %></div></div>
             </div> 
             </div> 
             </br> <div> 
           <% else %>
             <div id="print_<%= i %>" style="width:<%= 98/@tag.print_x_size %>%;height:<%= 100/@tag.print_y_size %>%;margin-right: 10px;float: left;">
-              <%= render :partial => "print_#{@tag.tag_type_y}_#{@tag.tag_type_x}" , :locals => { :i => i }%> 
+              <%= render :partial => "print_#{@tag.tag_type_y}_#{@tag.tag_type_x}" , :locals => { :i => i,:chemical => @chemical }%> 
               <div style="width:100%;height:100%;" id="hidde_note<%= i %>"><div class="hidde_note button" id="hidde_button<%= i %>"><%= image_tag "timg.jpeg", style: 'width:128px;height128px; ', class:"noprint"  %></div></div>
             </div>         
           <% end %>
@@ -117,7 +127,9 @@ body{line-height:1.4;color:#333;font-family:"Microsoft Yahei","微软雅黑",Tah
        <span class="red">注意：标签超出打印尺寸</span>
      <% end %>
    </div>
+
    <div class="pageBreak"></digv>
+
 </div>
 
 
@@ -175,11 +187,13 @@ body{line-height:1.4;color:#333;font-family:"Microsoft Yahei","微软雅黑",Tah
 
    模版：_print_260_90.html.erb
 
+    
+
     <div style="display: none;" id="show_note<%= i %>" class="transform_tag" >
     <div class="main button max_main show_note print2" id="show_button<%= i %>">
         <header class="print_header">
-            <div class="product_name"><%= @chemical.name_cn %>
-                <span><%= @chemical.name %></span>
+            <div class="product_name"><%= chemical.name_cn %>
+                <span><%= chemical.name %></span>
             </div>
             <%= image_tag "print/logo.png" %>
         </header>
@@ -187,32 +201,32 @@ body{line-height:1.4;color:#333;font-family:"Microsoft Yahei","微软雅黑",Tah
             <div class="coa">
                 <div class="from">
                     <div class="column">
-                        <div class="coa_ml">CAS号:<%= @chemical.cas %></div>
+                        <div class="coa_ml">CAS号:<%= chemical.cas %></div>
                         <div class="coa_mr">含量:</div>
                     </div>
                     <div class="column">
-                        <div class="coa_ml">分子式:<%= @chemical.formula %></div>
-                        <div class="coa_mr">分子量:<%= @chemical.molecular_weight %></div>
+                        <div class="coa_ml">分子式:<%= chemical.formula %></div>
+                        <div class="coa_mr">分子量:<%= chemical.molecular_weight %></div>
                     </div>
                     <div class="column">
                         <div class="coa_ml">性状:</div>
                     </div>
                     <div class="column">
-                        <div class="coa_ml">存储:<%= @chemical.chemical_additions&.last&.content %></div>
+                        <div class="coa_ml">存储:<%= chemical.chemical_additions&.last&.content %></div>
                     </div>
                     <div class="column">
-                        <div class="coa_ml">分子量:<%= @chemical.molecular_weight %></div>
+                        <div class="coa_ml">分子量:<%= chemical.molecular_weight %></div>
                     </div>
                     <div class="column">
                       <div class="coa_ml">批次号:2016265898</div>
                     </div>
-                    <% if @chemical.chemical_info_warnings.present? %>
+                    <% if chemical.chemical_info_warnings.present? %>
                     <div class="danger">
                         <div class='text'>
                             <span>Danger</span>
                             <span>危险</span>
                         </div>
-                        <% @chemical.chemical_info_warnings.each do |warning| %>
+                        <% chemical.chemical_info_warnings.each do |warning| %>
                           <img src="/assets/GHS/<%= warning.code %>.png" style="width:40px;height:40px" title="<%= warning.description_cn %>">
                         <% end %>
                     </div>
@@ -221,21 +235,24 @@ body{line-height:1.4;color:#333;font-family:"Microsoft Yahei","微软雅黑",Tah
             </div>
             <div class="qr_code">
                <p>50ml</p>
-                <img src="<%= @chemical.qrcode %>" alt="">
+                <img src="<%= chemical.qrcode %>" alt="">
             </div>
             <%= image_tag "print/text.jpg", class:"caution" %>
         </div>
         <%= image_tag "print/footer.jpg", class:"footer" %>
     </div>
     </div>
+
     
     模版：_print_40_100.html.erb
  
+    
+
     <div style="display: none;" id="show_note<%= i %>" >
     <div class="main button max_main show_note print" id="show_button<%= i %>">
         <header class="print_header">
-            <div class="product_name"><%= @chemical.name_cn %>
-                <span><%= @chemical.name %></span>
+            <div class="product_name"><%= chemical.name_cn %>
+                <span><%= chemical.name %></span>
             </div>
             <%= image_tag "print/logo.png" %>
         </header>
@@ -243,32 +260,32 @@ body{line-height:1.4;color:#333;font-family:"Microsoft Yahei","微软雅黑",Tah
             <div class="coa">
                 <div class="from">
                     <div class="column">
-                        <div class="coa_ml">CAS号:<%= @chemical.cas %></div>
+                        <div class="coa_ml">CAS号:<%= chemical.cas %></div>
                         <div class="coa_mr">含量:</div>
                     </div>
                     <div class="column">
-                        <div class="coa_ml">分子式:<%= @chemical.formula %></div>
-                        <div class="coa_mr">分子量:<%= @chemical.molecular_weight %></div>
+                        <div class="coa_ml">分子式:<%= chemical.formula %></div>
+                        <div class="coa_mr">分子量:<%= chemical.molecular_weight %></div>
                     </div>
                     <div class="column">
                         <div class="coa_ml">性状:</div>
                     </div>
                     <div class="column">
-                        <div class="coa_ml">存储:<%= @chemical.chemical_additions&.last&.content %></div>
+                        <div class="coa_ml">存储:<%= chemical.chemical_additions&.last&.content %></div>
                     </div>
                     <div class="column">
-                        <div class="coa_ml">分子量:<%= @chemical.molecular_weight %></div>
+                        <div class="coa_ml">分子量:<%= chemical.molecular_weight %></div>
                     </div>
                     <div class="column">
                       <div class="coa_ml">批次号:2016265898</div>
                     </div>
-                    <% if @chemical.chemical_info_warnings.present? %>
+                    <% if chemical.chemical_info_warnings.present? %>
                     <div class="danger">
                         <div class='text'>
                             <span>Danger</span>
                             <span>危险</span>
                         </div>
-                        <% @chemical.chemical_info_warnings.each do |warning| %>
+                        <% chemical.chemical_info_warnings.each do |warning| %>
                           <img src="/assets/GHS/<%= warning.code %>.png" style="width:40px;height:40px" title="<%= warning.description_cn %>">
                         <% end %>
                     </div>
@@ -277,11 +294,12 @@ body{line-height:1.4;color:#333;font-family:"Microsoft Yahei","微软雅黑",Tah
             </div>
             <div class="qr_code">
                <p>50ml</p>
-                <img src="<%= @chemical.qrcode %>" alt="">
+                <img src="<%= chemical.qrcode %>" alt="">
             </div>
             <%= image_tag "print/text.jpg", class:"caution" %>
         </div>
         <%= image_tag "print/footer.jpg", class:"footer" %>
     </div>
     </div>
+
 
