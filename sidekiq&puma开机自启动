@@ -1,0 +1,51 @@
+#!/bin/bash
+#sidekiq startup
+
+
+#setting ruby environment
+export RBENV_ROOT="$HOME/.rbenv"
+export PATH="$HOME/.rbenv/bin:$PATH"
+
+#judge ruby environment and startup sidekiq
+if ! which rbenv >/dev/null; then
+  echo "! rbenv not found"
+  echo "! If rbenv is installed, check your :rbenv_path setting."
+  exit 1
+
+else  
+
+#stop sidekiq
+  eval "$(rbenv init -)" 
+  echo "-----> Stop sidekiq"
+  cd /data/www/schooltop/current && RAILS_ENV="staging" bundle exec sidekiqctl stop /data/www/schooltop/current/tmp/pids/sidekiq.pid 10 && RAILS_ENV="staging" bundle exec sidekiqctl stop /data/www/schooltop/current/tmp/pids/sidekiq.pid-1 10 && cd - && echo "sidekiq was stop"
+
+#start sidekiq
+  eval "$(rbenv init -)"
+  echo "-----> Start sidekiq"
+cd /data/www/schooltop/current && RAILS_ENV="staging" bundle exec sidekiq -d -d -i 0 -P /data/www/schooltop/current/tmp/pids/sidekiq.pid && RAILS_ENV="staging" bundle exec sidekiq -d -d -i 1 -P /data/www/schooltop/current/tmp/pids/sidekiq.pid-1 && cd - && echo "sidekiq was start"
+
+
+fi
+
+
+／－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－／
+
+
+#!/bin/sh
+
+
+#setting ruby environment
+export RBENV_ROOT="$HOME/.rbenv"
+export PATH="$HOME/.rbenv/bin:$PATH"
+
+#judge ruby environment and startup puma server
+if ! which rbenv >/dev/null; then
+  echo "rbenv not found!"
+  echo "If rbenv is installed, check your :rbenv_path setting!"
+  exit 1
+else
+  eval "$(rbenv init -)"
+  cd /data/www/schooltop/current && BUNDLE_GEMFILE=/data/www/schooltop/current/Gemfile RAILS_ENV="staging" bundle exec puma -e staging
+  echo "Puma is running!"
+fi
+
