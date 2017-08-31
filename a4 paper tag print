@@ -1,4 +1,3 @@
-Java代码  收藏代码
 class PrintBase
   # 默认现在只有a4纸大小
   PaperType = {1=>[210,297]}
@@ -35,7 +34,6 @@ class PrintBase
 end      
 
 
-Java代码  收藏代码
 class Admin::Print::WhmallTagsController <  Admin::BaseController  
     layout:false  
     def print  
@@ -56,7 +54,6 @@ end
 
 
 
-Java代码  收藏代码
 <%= stylesheet_link_tag 'admin/application' %>
 <%= javascript_include_tag 'admin/application' %>
 <%= stylesheet_link_tag 'print' %>
@@ -187,8 +184,6 @@ body{line-height:1.4;color:#333;font-family:"Microsoft Yahei","微软雅黑",Tah
 
    模版：_print_260_90.html.erb
 
-    
-
     <div style="display: none;" id="show_note<%= i %>" class="transform_tag" >
     <div class="main button max_main show_note print2" id="show_button<%= i %>">
         <header class="print_header">
@@ -246,8 +241,6 @@ body{line-height:1.4;color:#333;font-family:"Microsoft Yahei","微软雅黑",Tah
     
     模版：_print_40_100.html.erb
  
-    
-
     <div style="display: none;" id="show_note<%= i %>" >
     <div class="main button max_main show_note print" id="show_button<%= i %>">
         <header class="print_header">
