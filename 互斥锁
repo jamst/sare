@@ -1,0 +1,16 @@
+ def transaction(&block)
+        if @in_transaction || options[:without_mutex]
+          block.call self
+        else
+          @mutex.synchronize do
+            @in_transaction = true
+            result = block.call
+            @in_transaction = false
+            result
+          end
+        end
+      end
+
+@mutex = Mutex.new
+
+http://blog.csdn.net/u013022032/article/details/51991610
