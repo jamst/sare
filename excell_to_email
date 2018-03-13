@@ -1,3 +1,4 @@
+class ReportMailer < ApplicationMailer
   # email中定义邮件方法
   def inventory_report_mail(start_time,end_time)
     @start_time = start_time
@@ -10,6 +11,8 @@
       mail(:to=> "jamst@whmall.com" , :cc =>"test@whmall.com" ,:subject => "品类寄售统计报表#{@start_time}-#{@end_time}")
     end
   end
+end
+  
 
 
 class ExecuteReport
@@ -125,4 +128,20 @@ class ExecuteReport
 	end
   
   end
+  
+  
+  ###################### rake任务 ######################
+  
+  namespace :report do
+    # 代销寄售/代销直发日报
+    task inventory_report_mail: :environment do
+      ReportMailer.inventory_report_mail(Time.now.at_beginning_of_month,Time.now).deliver
+    end
+  end
+
+  ###################### schedule定时器 ######################
+	
+  every 1.day, :at => '6:00 am' do
+    rake "report:inventory_report_mail"
+  end  
 	
