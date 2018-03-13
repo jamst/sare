@@ -5,7 +5,7 @@ class ReportMailer < ApplicationMailer
     @end_time = end_time
     # 这样子添加邮件附件
     attachments['品类寄售统计报表' << @start_time < '-' << @end_time << '.xls'] = ExecuteReport.inventory_report(start_time,end_time)
-    # sql例子
+    # 添加自己的导出sql例子
     sql = "select name,price ... from inventories limit 100"
     attachments['模版邮件附件报表' << @start_time < '-' << @end_time << '.xls'] = ExecuteReport.temple_report("#{Rails.root}/public/xls/export_inventory_price.xls",sql,1)
     if Rails.env.production?
