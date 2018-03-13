@@ -1,0 +1,96 @@
+  # email中定义
+  def inventory_report_mail(start_time,end_time)
+    @start_time = start_time
+    @end_time = end_time
+    attachments['品类寄售统计报表' << @start_time < '-' << @end_time << '.xls'] = ExecuteReport.inventory_report(start_time,end_time)
+    if Rails.env.production?
+      mail(:to=> "jamst@whmall.com" , :cc =>"test@whmall.com" ,:subject => "品类寄售统计报表#{@start_time}-#{@end_time}")
+    end
+  end
+
+
+class ExecuteReport
+  def self.inventory_report(search_date,order_type)
+	    # 定义参数
+	    begin_time = search_date.at_beginning_of_day
+        end_time = search_date.at_end_of_day
+	     
+	    # 定义SQL
+	    sql = <<-SQL
+	        select 
+	          DATE_FORMAT(o_detail.created_at,'%Y-%m-%d'),
+	          c_order.order_no,
+	          pro.name_cn,
+	          pro.cas,
+	          o_detail.package,
+	          (case o_detail.package_unit 
+	                when 1 then 'mg' 
+	                when 2 then 'g' 
+	                when 3 then 'kg' 
+	                when 4 then 'ML'  
+	                when 5 then 'L' 
+	                when 6 then 'T' 
+	                else '' end ) as packge_unit_name,
+	          o_detail.package_count,
+	          (case vendor_payment_type 
+	                when 1 then '款到发货' 
+	                when 2 then '货到付款' 
+	                when 3 then '预存款' 
+	                when 4 then '账期支付' 
+	                when 5 then '分期付款' 
+	                end ) as payment_style_name,
+	          (case vendor_payment_status 
+	                when 0 then '未付款' 
+	                when 1 then '已付款'  
+	                when 2 then '部分付款' 
+	                when 3 then '付款申请中' 
+	                when 4 then '月结对账中' 
+	                end ) as money_finish_status_name,
+	          o_detail.received_amount,
+	          o_detail.amount,
+	          (case o_detail.invoice_type 
+	                when 1 then '增值税发票(17%)' 
+	                when 2 then '增值税发票(普通)' 
+	                when 4 then '不开票' 
+	                else '' end ) as bill_type_name,
+	          cus.company_name_cn ,
+	          cus.name,
+	          cus.email as member_email,
+	          address.address,
+	          address.name,
+	          address.mobile
+	          from order_details o_detail 
+	          inner join chemicals pro on pro.id =o_detail.chemical_id
+	          inner join customer_orders c_order on c_order.id = o_detail.customer_order_id  
+	          inner join users cus on cus.id = c_order.user_id
+	          inner join addresses address on address.id = c_order.address_id
+	          where o_detail.vendor_order_type = #{order_type}
+            and o_detail.detail_status != 7
+            and o_detail.created_at >= '#{begin_time}' and o_detail.created_at < '#{end_time}'
+	     SQL
+
+	     # 解析SQL
+	     columns = %w{订单日期	客户订单编号	产品名称	CAS	订单明细购买量 	购买单位	包装个数	付款方式	是否收款	收款金额	订单总金额	客户发票类型	客户名称	联系人	邮箱	收货地址	收货联系人	收货联系人电话 } 
+	     reports = execute_sql(sql)
+	     # 生成EXCELL
+	     to_xlsx(columns,reports,search_date)
+	end
+
+
+	def self.to_xlsx(columns,reports,search_date)
+	    file = Spreadsheet::Workbook.new
+ 
+	    list = file.create_worksheet :name => search_date.to_s(:db)
+	    list.row(0).concat columns
+	 
+	    reports.each_with_index { |report, i|
+          list.row(i+1).concat report
+	    }
+
+	    xls_report = StringIO.new 
+	    file.write xls_report  
+		xls_report.string
+	end
+  
+  end
+	
