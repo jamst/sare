@@ -1,8 +1,11 @@
-  # email中定义
+  # email中定义邮件方法
   def inventory_report_mail(start_time,end_time)
     @start_time = start_time
     @end_time = end_time
     attachments['品类寄售统计报表' << @start_time < '-' << @end_time << '.xls'] = ExecuteReport.inventory_report(start_time,end_time)
+    # sql例子
+    sql = "select name age ... from users limit 100"
+    attachments['模版报表' << @start_time < '-' << @end_time << '.xls'] = ExecuteReport.temple_report("#{Rails.root}/public/xls/export_inventory_price.xls",sql,1)
     if Rails.env.production?
       mail(:to=> "jamst@whmall.com" , :cc =>"test@whmall.com" ,:subject => "品类寄售统计报表#{@start_time}-#{@end_time}")
     end
@@ -15,6 +18,7 @@ class ExecuteReport
   def self.temple_report(temple_path,sql,start_row)
       report = execute_sql(sql)
       add_size = report.first&.size
+      # 模版从第几行开始写
       start_row = start_row.to_i
       file = Spreadsheet.open temple_path
 
@@ -113,6 +117,11 @@ class ExecuteReport
 	    xls_report = StringIO.new 
 	    file.write xls_report  
 	    xls_report.string
+	end
+	
+	
+	def self.execute_sql(sql)
+	  cullent_attributes = ActiveRecord::Base.connection.execute(sql)
 	end
   
   end
