@@ -3,6 +3,7 @@ class ReportMailer < ApplicationMailer
   def inventory_report_mail(start_time,end_time)
     @start_time = start_time
     @end_time = end_time
+    # 这样子添加邮件附件
     attachments['品类寄售统计报表' << @start_time < '-' << @end_time << '.xls'] = ExecuteReport.inventory_report(start_time,end_time)
     # sql例子
     sql = "select name,price ... from inventories limit 100"
