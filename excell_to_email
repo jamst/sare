@@ -10,9 +10,32 @@
 
 
 class ExecuteReport
+
+  # 模版导出excell
+  def self.temple_report(temple_path,sql,start_row)
+      report = execute_sql(sql)
+      add_size = report.first&.size
+      start_row = start_row.to_i
+      file = Spreadsheet.open temple_path
+
+      list = file.worksheet  0
+
+      # 默认sql的列数要和xls模板列数对应
+      report.each_with_index do |detail,index|
+        add_size.times do |i|
+           list[index+start_row,i] = detail[i]
+        end
+      end
+
+      xls_report = StringIO.new
+      file.write xls_report
+      xls_report.string
+  end
+
+  # 新建excell直接sql导出报表
   def self.inventory_report(search_date,order_type)
-	    # 定义参数
-	    begin_time = search_date.at_beginning_of_day
+	# 定义参数
+	begin_time = search_date.at_beginning_of_day
         end_time = search_date.at_end_of_day
 	     
 	    # 定义SQL
@@ -67,7 +90,7 @@ class ExecuteReport
 	          where o_detail.vendor_order_type = #{order_type}
             and o_detail.detail_status != 7
             and o_detail.created_at >= '#{begin_time}' and o_detail.created_at < '#{end_time}'
-	     SQL
+	    SQL
 
 	     # 解析SQL
 	     columns = %w{订单日期	客户订单编号	产品名称	CAS	订单明细购买量 	购买单位	包装个数	付款方式	是否收款	收款金额	订单总金额	客户发票类型	客户名称	联系人	邮箱	收货地址	收货联系人	收货联系人电话 } 
@@ -84,12 +107,12 @@ class ExecuteReport
 	    list.row(0).concat columns
 	 
 	    reports.each_with_index { |report, i|
-          list.row(i+1).concat report
+              list.row(i+1).concat report
 	    }
 
 	    xls_report = StringIO.new 
 	    file.write xls_report  
-		xls_report.string
+	    xls_report.string
 	end
   
   end
