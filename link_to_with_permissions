@@ -1,0 +1,70 @@
+module TheRoleHelper
+
+  def link_to(name = nil, options = nil, html_options = nil, &block)
+    if block_given?
+      _options = name || {}
+      _html_options = options
+    else
+      _options = options || {}
+      _html_options = html_options
+    end
+
+    if _options.is_a? String
+      begin
+        path_params = Rails.application.routes.recognize_path _options, { method: _html_options&.fetch(:method, nil) }
+      rescue ActionController::RoutingError
+        return super
+      end
+    elsif _options.is_a? Symbol
+      return super
+    else
+      path_params = _options.slice(:controller, :action)
+    end
+    path_params[:controller] ||= controller_path
+    path_params[:action] ||= action_name
+
+    controller = RailsCom::Controllers.controller(path_params[:controller]).new
+    controller.action_name = path_params[:action]
+    unless controller.detect_filter(:require_role)
+      return super
+    end
+
+    if defined?(the_role_user) && the_role_user&.has_role?(path_params[:controller], path_params[:action])
+      super
+    end
+  end
+
+end
+
+
+法二：
+
+  def link_to_with_permissions(name = nil, options = nil, html_options = nil, &block)
+    html_options, options, name = options, name, block if block_given?
+    options ||= {}
+    entity = html_options.delete(:entity)
+    entity.current_employee = current_employee if entity.respond_to?(:current_employee)
+    entity.current_ability = current_ability if entity.respond_to?(:current_ability)
+
+    active_class = html_options.delete(:active_class)
+    html_options = convert_options_to_data_attributes(options, html_options)
+
+    url = url_for(options)
+    html_options['href'] ||= url
+    method = html_options['data-method'].present?? html_options['data-method'] : 'get'
+    r = Rails.application.routes.recognize_path(url, method: method, subdomain: 'www')
+    if active_class.present? && controller_path  == r[:controller]
+      html_options['class'] = "#{html_options['class']} #{active_class}".strip
+    end
+    auth_controller_name = ::Service::PermissionUtils.convert_controller_name(r[:controller])
+    auth_action_name = ::Service::PermissionUtils.convert_action_name(r[:action])
+    if ::Service::PermissionUtils.need_check_permission(auth_controller_name)
+      if can?(auth_action_name.to_sym, auth_controller_name)
+        if entity.blank? || can?(auth_action_name.to_sym, entity)
+          content_tag(:a, name || url, html_options, &block)
+        end
+      end
+    else
+      content_tag(:a, name || url, html_options, &block)
+    end
+  end
